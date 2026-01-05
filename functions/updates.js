@@ -1,14 +1,13 @@
-const { onRequest } = require("firebase-functions/v2/https");
 const { db } = require("./db");
 const { Timestamp } = require("firebase-admin/firestore");
 
-// Collection
+// Firestore collection
 const updatesCollection = db.collection("updates");
 
 // -----------------------------------------------------
 // CREATE UPDATE
 // -----------------------------------------------------
-exports.createUpdate = onRequest(async (req, res) => {
+exports.createUpdate = async (req, res) => {
   try {
     const {
       title,
@@ -18,12 +17,12 @@ exports.createUpdate = onRequest(async (req, res) => {
       visibility,
       relatedUrl,
       createdBy,
-    } = req.body;
+    } = req.body || {};
 
     if (!title || !description) {
-      return res
-        .status(400)
-        .json({ error: "Title and description are required" });
+      return res.status(400).json({
+        error: "Title and description are required",
+      });
     }
 
     const data = {
@@ -39,21 +38,27 @@ exports.createUpdate = onRequest(async (req, res) => {
     };
 
     const docRef = await updatesCollection.add(data);
+
     res.json({ success: true, id: docRef.id });
   } catch (err) {
-    console.error("Error creating update:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("createUpdate error:", err);
+    res.status(500).json({
+      error: err.message,
+    });
   }
-});
+};
 
 // -----------------------------------------------------
 // UPDATE UPDATE
 // -----------------------------------------------------
-exports.updateUpdate = onRequest(async (req, res) => {
+exports.updateUpdate = async (req, res) => {
   try {
-    const { id, ...updates } = req.body;
+    const { id, ...updates } = req.body || {};
+
     if (!id) {
-      return res.status(400).json({ error: "Update ID required" });
+      return res.status(400).json({
+        error: "Update ID required",
+      });
     }
 
     updates.updatedAt = Timestamp.now();
@@ -61,35 +66,43 @@ exports.updateUpdate = onRequest(async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error("Error updating update:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("updateUpdate error:", err);
+    res.status(500).json({
+      error: err.message,
+    });
   }
-});
+};
 
 // -----------------------------------------------------
 // DELETE UPDATE
 // -----------------------------------------------------
-exports.deleteUpdate = onRequest(async (req, res) => {
+exports.deleteUpdate = async (req, res) => {
   try {
-    const { id } = req.body;
+    const { id } = req.body || {};
+
     if (!id) {
-      return res.status(400).json({ error: "Update ID required" });
+      return res.status(400).json({
+        error: "Update ID required",
+      });
     }
 
     await updatesCollection.doc(id).delete();
-    res.json({ success: true, message: "Update deleted" });
+
+    res.json({ success: true });
   } catch (err) {
-    console.error("Error deleting update:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("deleteUpdate error:", err);
+    res.status(500).json({
+      error: err.message,
+    });
   }
-});
+};
 
 // -----------------------------------------------------
 // GET UPDATES LIST
 // -----------------------------------------------------
-exports.getUpdates = onRequest(async (req, res) => {
+exports.getUpdates = async (req, res) => {
   try {
-    const { type, priority, visibility, limit = 50 } = req.body || {};
+    const { type, priority, visibility, limit = 50 } = req.query || {};
 
     let query = updatesCollection.orderBy("createdAt", "desc");
 
@@ -97,7 +110,7 @@ exports.getUpdates = onRequest(async (req, res) => {
     if (priority) query = query.where("priority", "==", priority);
     if (visibility) query = query.where("visibility", "==", visibility);
 
-    const snap = await query.limit(limit).get();
+    const snap = await query.limit(Number(limit)).get();
     const updates = snap.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
@@ -105,24 +118,31 @@ exports.getUpdates = onRequest(async (req, res) => {
 
     res.json({ success: true, updates });
   } catch (err) {
-    console.error("Error fetching updates:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("getUpdates error:", err);
+    res.status(500).json({
+      error: err.message,
+    });
   }
-});
+};
 
 // -----------------------------------------------------
 // GET SINGLE UPDATE
 // -----------------------------------------------------
-exports.getUpdateDetail = onRequest(async (req, res) => {
+exports.getUpdateDetail = async (req, res) => {
   try {
     const { id } = req.query;
+
     if (!id) {
-      return res.status(400).json({ error: "Update ID required" });
+      return res.status(400).json({
+        error: "Update ID required",
+      });
     }
 
     const doc = await updatesCollection.doc(id).get();
     if (!doc.exists) {
-      return res.status(404).json({ error: "Update not found" });
+      return res.status(404).json({
+        error: "Update not found",
+      });
     }
 
     res.json({
@@ -130,7 +150,9 @@ exports.getUpdateDetail = onRequest(async (req, res) => {
       update: { id: doc.id, ...doc.data() },
     });
   } catch (err) {
-    console.error("Error fetching update detail:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("getUpdateDetail error:", err);
+    res.status(500).json({
+      error: err.message,
+    });
   }
-});
+};

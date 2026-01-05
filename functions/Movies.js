@@ -1,4 +1,3 @@
-const { onRequest } = require("firebase-functions/v2/https");
 const { db } = require("./db");
 const { Timestamp } = require("firebase-admin/firestore");
 
@@ -8,7 +7,7 @@ const moviesCollection = db.collection("movies");
 // -----------------------------------------------------
 // CREATE MOVIE
 // -----------------------------------------------------
-exports.createMovie = onRequest(async (req, res) => {
+exports.createMovie = async (req, res) => {
   try {
     const {
       title,
@@ -21,7 +20,7 @@ exports.createMovie = onRequest(async (req, res) => {
       posterUrl,
       trailerUrl,
       createdBy,
-    } = req.body;
+    } = req.body || {};
 
     if (!title) {
       return res.status(400).json({ error: "Movie title is required" });
@@ -44,19 +43,20 @@ exports.createMovie = onRequest(async (req, res) => {
     };
 
     const docRef = await moviesCollection.add(movieData);
-    return res.json({ success: true, id: docRef.id });
+
+    res.json({ success: true, id: docRef.id });
   } catch (err) {
-    console.error("Error creating movie:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("createMovie error:", err);
+    res.status(500).json({ error: err.message });
   }
-});
+};
 
 // -----------------------------------------------------
 // UPDATE MOVIE
 // -----------------------------------------------------
-exports.updateMovie = onRequest(async (req, res) => {
+exports.updateMovie = async (req, res) => {
   try {
-    const { id, ...updates } = req.body;
+    const { id, ...updates } = req.body || {};
 
     if (!id) {
       return res.status(400).json({ error: "Movie ID required" });
@@ -65,36 +65,37 @@ exports.updateMovie = onRequest(async (req, res) => {
     updates.updatedAt = Timestamp.now();
     await moviesCollection.doc(id).update(updates);
 
-    return res.json({ success: true, message: "Movie updated" });
+    res.json({ success: true, message: "Movie updated" });
   } catch (err) {
-    console.error("Error updating movie:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("updateMovie error:", err);
+    res.status(500).json({ error: err.message });
   }
-});
+};
 
 // -----------------------------------------------------
 // DELETE MOVIE
 // -----------------------------------------------------
-exports.deleteMovie = onRequest(async (req, res) => {
+exports.deleteMovie = async (req, res) => {
   try {
-    const { id } = req.body;
+    const { id } = req.body || {};
 
     if (!id) {
       return res.status(400).json({ error: "Movie ID required" });
     }
 
     await moviesCollection.doc(id).delete();
-    return res.json({ success: true, message: "Movie deleted" });
+
+    res.json({ success: true, message: "Movie deleted" });
   } catch (err) {
-    console.error("Error deleting movie:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("deleteMovie error:", err);
+    res.status(500).json({ error: err.message });
   }
-});
+};
 
 // -----------------------------------------------------
 // GET MOVIES LIST
 // -----------------------------------------------------
-exports.getMovies = onRequest(async (req, res) => {
+exports.getMovies = async (req, res) => {
   try {
     const { language, status = "active", limit = 100 } = req.body || {};
 
@@ -106,23 +107,24 @@ exports.getMovies = onRequest(async (req, res) => {
       query = query.where("language", "==", language);
     }
 
-    const snap = await query.limit(limit).get();
-    const movies = snap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
+    const snap = await query.limit(Number(limit)).get();
+
+    const movies = snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
     }));
 
-    return res.json({ success: true, movies });
+    res.json({ success: true, movies });
   } catch (err) {
-    console.error("Error fetching movies:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("getMovies error:", err);
+    res.status(500).json({ error: err.message });
   }
-});
+};
 
 // -----------------------------------------------------
 // GET SINGLE MOVIE
 // -----------------------------------------------------
-exports.getMovieDetail = onRequest(async (req, res) => {
+exports.getMovieDetail = async (req, res) => {
   try {
     const { id } = req.query;
 
@@ -131,16 +133,17 @@ exports.getMovieDetail = onRequest(async (req, res) => {
     }
 
     const doc = await moviesCollection.doc(id).get();
+
     if (!doc.exists) {
       return res.status(404).json({ error: "Movie not found" });
     }
 
-    return res.json({
+    res.json({
       success: true,
       movie: { id: doc.id, ...doc.data() },
     });
   } catch (err) {
-    console.error("Error fetching movie detail:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("getMovieDetail error:", err);
+    res.status(500).json({ error: err.message });
   }
-});
+};

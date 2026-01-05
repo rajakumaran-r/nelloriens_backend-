@@ -1,3 +1,5 @@
+require("dotenv").config({ path: __dirname + "/.env" });
+
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -14,7 +16,7 @@ registerModule(app, "movies", require("./Movies"));
 registerModule(app, "transport", require("./Transport"));
 registerModule(app, "news", require("./news"));
 registerModule(app, "offers", require("./offers"));
-registerModule(app, "media", require("./media"));
+// registerModule(app, "media", require("./media"));
 registerModule(app, "notifications", require("./notifications"));
 registerModule(app, "updates", require("./updates"));
 registerModule(app, "results", require("./results"));
@@ -23,6 +25,7 @@ registerModule(app, "famousFoods", require("./famousFoods"));
 registerModule(app, "famousStay", require("./famousStay"));
 registerModule(app, "history", require("./history"));
 registerModule(app, "commonAds", require("./commonAds"));
+registerModule(app, "ads", require("./ads"));
 
 // ------------------- HEALTH CHECK -------------------
 app.get("/", (req, res) => {

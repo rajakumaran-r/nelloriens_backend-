@@ -1,4 +1,3 @@
-const { onRequest } = require("firebase-functions/v2/https");
 const { db } = require("./db");
 const { Timestamp } = require("firebase-admin/firestore");
 
@@ -8,7 +7,7 @@ const resultsCollection = db.collection("results");
 // -----------------------------------------------------
 // CREATE RESULT
 // -----------------------------------------------------
-exports.createResult = onRequest(async (req, res) => {
+exports.createResult = async (req, res) => {
   try {
     const {
       title,
@@ -18,12 +17,12 @@ exports.createResult = onRequest(async (req, res) => {
       status,
       publishedAt,
       createdBy,
-    } = req.body;
+    } = req.body || {};
 
     if (!title || !description) {
-      return res
-        .status(400)
-        .json({ error: "Title and description are required" });
+      return res.status(400).json({
+        error: "Title and description are required",
+      });
     }
 
     const data = {
@@ -41,59 +40,70 @@ exports.createResult = onRequest(async (req, res) => {
     };
 
     const docRef = await resultsCollection.add(data);
+
     res.json({ success: true, id: docRef.id });
   } catch (err) {
-    console.error("Error creating result:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("createResult error:", err);
+    res.status(500).json({ error: err.message });
   }
-});
+};
 
 // -----------------------------------------------------
 // UPDATE RESULT
 // -----------------------------------------------------
-exports.updateResult = onRequest(async (req, res) => {
+exports.updateResult = async (req, res) => {
   try {
-    const { id, ...updates } = req.body;
+    const { id, ...updates } = req.body || {};
+
     if (!id) {
-      return res.status(400).json({ error: "Result ID required" });
+      return res.status(400).json({
+        error: "Result ID required",
+      });
     }
 
     if (updates.publishedAt) {
-      updates.publishedAt = Timestamp.fromDate(new Date(updates.publishedAt));
+      updates.publishedAt = Timestamp.fromDate(
+        new Date(updates.publishedAt)
+      );
     }
 
     updates.updatedAt = Timestamp.now();
+
     await resultsCollection.doc(id).update(updates);
 
     res.json({ success: true });
   } catch (err) {
-    console.error("Error updating result:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("updateResult error:", err);
+    res.status(500).json({ error: err.message });
   }
-});
+};
 
 // -----------------------------------------------------
 // DELETE RESULT
 // -----------------------------------------------------
-exports.deleteResult = onRequest(async (req, res) => {
+exports.deleteResult = async (req, res) => {
   try {
-    const { id } = req.body;
+    const { id } = req.body || {};
+
     if (!id) {
-      return res.status(400).json({ error: "Result ID required" });
+      return res.status(400).json({
+        error: "Result ID required",
+      });
     }
 
     await resultsCollection.doc(id).delete();
+
     res.json({ success: true, message: "Result deleted" });
   } catch (err) {
-    console.error("Error deleting result:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("deleteResult error:", err);
+    res.status(500).json({ error: err.message });
   }
-});
+};
 
 // -----------------------------------------------------
 // GET RESULTS LIST
 // -----------------------------------------------------
-exports.getResults = onRequest(async (req, res) => {
+exports.getResults = async (req, res) => {
   try {
     const { category, status, limit = 50 } = req.body || {};
 
@@ -103,6 +113,7 @@ exports.getResults = onRequest(async (req, res) => {
     if (status) query = query.where("status", "==", status);
 
     const snap = await query.limit(limit).get();
+
     const results = snap.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
@@ -110,24 +121,30 @@ exports.getResults = onRequest(async (req, res) => {
 
     res.json({ success: true, results });
   } catch (err) {
-    console.error("Error fetching results:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("getResults error:", err);
+    res.status(500).json({ error: err.message });
   }
-});
+};
 
 // -----------------------------------------------------
 // GET SINGLE RESULT
 // -----------------------------------------------------
-exports.getResultDetail = onRequest(async (req, res) => {
+exports.getResultDetail = async (req, res) => {
   try {
     const { id } = req.query;
+
     if (!id) {
-      return res.status(400).json({ error: "Result ID required" });
+      return res.status(400).json({
+        error: "Result ID required",
+      });
     }
 
     const doc = await resultsCollection.doc(id).get();
+
     if (!doc.exists) {
-      return res.status(404).json({ error: "Result not found" });
+      return res.status(404).json({
+        error: "Result not found",
+      });
     }
 
     res.json({
@@ -135,7 +152,7 @@ exports.getResultDetail = onRequest(async (req, res) => {
       result: { id: doc.id, ...doc.data() },
     });
   } catch (err) {
-    console.error("Error fetching result detail:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("getResultDetail error:", err);
+    res.status(500).json({ error: err.message });
   }
-});
+};
